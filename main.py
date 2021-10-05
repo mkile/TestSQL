@@ -4,6 +4,7 @@ from json import loads
 
 DB_NAME = 'test.db'
 TABLE_DELETE_REQUEST = "DROP TABLE '{}'"
+TABLE_CHECK_REQUEST = "SELECT count(name) from sqlite_master where type = 'table' and name = '{}'"
 TABLE_CREATE_REQUEST = "CREATE TABLE {} ({})"
 DELETE_ALL_REQUEST = "DELETE FROM "
 INSERT_REQUEST = "INSERT OR REPLACE INTO {} VALUES ({})"
@@ -18,7 +19,9 @@ def check_n_create_data_tables(db_name):
         return 'DB Connection error, cannot continue'
     else:
         for table_name in list(tables_data.keys()):
-            connection.execute(TABLE_DELETE_REQUEST.format(table_name))
+            test_result = connection.execute(TABLE_CHECK_REQUEST.format(table_name)).fetchall()
+            if int(test_result[0][0]) > 0:
+                connection.execute(TABLE_DELETE_REQUEST.format(table_name))
             create_data = ''
             for parameter in tables_data[table_name]:
                 if len(create_data) > 0:
@@ -36,7 +39,7 @@ def fill_with_test_data(db_name):
     """Fill tables with data"""
     with open('sample_data.json') as f:
         tables_data = loads(f.read())
-    connection = sqlite3.Connection(db_name, detect_types=sqlite3.PARSE_DECLTYPES | sqlite3.PARSE_COLNAMES)
+    connection = sqlite3.Connection(db_name)  # , detect_types=sqlite3.PARSE_DECLTYPES | sqlite3.PARSE_COLNAMES
     if isinstance(connection, tuple):
         return 'DB Connection error, cannot continue'
     else:
@@ -58,16 +61,21 @@ def fill_with_test_data(db_name):
         connection.commit()
         return
 
+
 check_n_create_data_tables(DB_NAME)
 fill_with_test_data(DB_NAME)
 connection = sqlite3.Connection(DB_NAME)
 # part 1
+print('Results for part one')
 for dep in range(2):
-    result = connection.execute(f'select * from Employee where DepartmentId = {dep + 1} order by Salary desc limit 3 ')
+    result = connection.execute(f'SELECT * FROM Employee WHERE DepartmentId = {dep + 1} ORDER BY Salary DESC LIMIT 3 ')
     print(f'Department: {dep + 1}', *result.fetchall(), sep='\n')
 # part star
+print('Results for part two')
 three_months_ago = datetime.datetime.now() - datetime.timedelta(days=90)
 three_months_ago = three_months_ago.strftime('%Y-%m-%d')
 for dep in range(2):
-    result = connection.execute(f'select * from Employee where DepartmentId = {dep + 1} and Salary > 5000 and PaymentDate >= {three_months_ago} order by Salary desc limit 3 ')
+    result = connection.execute(
+        f"SELECT * FROM Employee WHERE DepartmentId = {dep + 1} AND Salary > 5000 AND "
+        f"PaymentDate >= '{three_months_ago}' ORDER BY Salary DESC LIMIT 3")
     print(f'Department: {dep + 1}', *result.fetchall(), sep='\n')
