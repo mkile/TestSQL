@@ -3,7 +3,8 @@
     "ID": "INTEGER NOT NULL",
     "Name": "TEXT NOT NULL",
     "Salary": "INTEGER NOT NULL",
-    "DepartmentId ": "INTEGER NOT NULL"
+    "DepartmentId": "INTEGER NOT NULL",
+    "PaymentDate": "DATE NOT NULL"
   },
   "Department": {
     "ID": "INTEGER NOT NULL",

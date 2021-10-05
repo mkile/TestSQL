@@ -1,15 +1,16 @@
 import sqlite3
+import datetime
 from json import loads
 
 DB_NAME = 'test.db'
-TABLE_CHECK_REQUEST = "SELECT COUNT(name) FROM sqlite_master WHERE type = 'table' AND name = '{}'"
+TABLE_DELETE_REQUEST = "DROP TABLE '{}'"
 TABLE_CREATE_REQUEST = "CREATE TABLE {} ({})"
 DELETE_ALL_REQUEST = "DELETE FROM "
 INSERT_REQUEST = "INSERT OR REPLACE INTO {} VALUES ({})"
 
 
 def check_n_create_data_tables(db_name):
-    """Check if data table has necessary table, if not create them"""
+    """Delete table and recreate it"""
     with open('tables_structure.json') as f:
         tables_data = loads(f.read())
     connection = sqlite3.Connection(db_name)
@@ -17,25 +18,25 @@ def check_n_create_data_tables(db_name):
         return 'DB Connection error, cannot continue'
     else:
         for table_name in list(tables_data.keys()):
-            test_result = connection.execute(TABLE_CHECK_REQUEST.format(table_name)).fetchall()
-            if int(test_result[0][0]) < 1:
-                create_data = ''
-                for parameter in tables_data[table_name]:
-                    if len(create_data) > 0:
-                        create_data += ', '
-                    create_data += '"' + parameter + '"' + ' ' + tables_data[table_name][parameter]
-                try:
-                    connection.execute(TABLE_CREATE_REQUEST.format(table_name, create_data))
-                except Exception as Err:
-                    print('Error creating table', table_name)
-                print('Table {} not found, creating ...'.format(table_name))
+            connection.execute(TABLE_DELETE_REQUEST.format(table_name))
+            create_data = ''
+            for parameter in tables_data[table_name]:
+                if len(create_data) > 0:
+                    create_data += ', '
+                create_data += '"' + str(parameter).strip() + '"' + ' ' + tables_data[table_name][parameter]
+            try:
+                connection.execute(TABLE_CREATE_REQUEST.format(table_name, create_data))
+            except Exception as Err:
+                print('Error creating table', table_name)
+            print('Table {} not found, creating ...'.format(table_name))
         return
 
 
 def fill_with_test_data(db_name):
+    """Fill tables with data"""
     with open('sample_data.json') as f:
         tables_data = loads(f.read())
-    connection = sqlite3.Connection(db_name)
+    connection = sqlite3.Connection(db_name, detect_types=sqlite3.PARSE_DECLTYPES | sqlite3.PARSE_COLNAMES)
     if isinstance(connection, tuple):
         return 'DB Connection error, cannot continue'
     else:
@@ -60,5 +61,13 @@ def fill_with_test_data(db_name):
 check_n_create_data_tables(DB_NAME)
 fill_with_test_data(DB_NAME)
 connection = sqlite3.Connection(DB_NAME)
-result = connection.execute('select * from Employee where DepartmentId = 1 order by Salary desc limit 3 ')
-print(*result.fetchall(), sep='\n')
+# part 1
+for dep in range(2):
+    result = connection.execute(f'select * from Employee where DepartmentId = {dep + 1} order by Salary desc limit 3 ')
+    print(f'Department: {dep + 1}', *result.fetchall(), sep='\n')
+# part star
+three_months_ago = datetime.datetime.now() - datetime.timedelta(days=90)
+three_months_ago = three_months_ago.strftime('%Y-%m-%d')
+for dep in range(2):
+    result = connection.execute(f'select * from Employee where DepartmentId = {dep + 1} and Salary > 5000 and PaymentDate >= {three_months_ago} order by Salary desc limit 3 ')
+    print(f'Department: {dep + 1}', *result.fetchall(), sep='\n')
