@@ -56,20 +56,28 @@ check_n_create_data_tables(connection)
 fill_with_test_data(connection)
 # part 1
 print('Results for part one')
-result = connection.execute('select Dep.Name, Empl.Name, Sals.Salary from Employee Empl '
-                            'inner join (select distinct Salary from Employee order by Salary desc limit 3) Sals '
-                            'on Empl.Salary=Sals.Salary '
+result = connection.execute('select Dep.Name, Empl.Name, Empl.Salary from Employee Empl '
+                            'inner join (select ID from '
+                            '(select DepartmentId, Salary, ID, row_number() '
+                            'over(partition by DepartmentId order by DepartmentId desc, Salary desc) as Num '
+                            'from Employee order by num desc, departmentid) where '
+                            'num <= 3 order by DepartmentId) Sals '
+                            'on Empl.ID=Sals.ID '
                             'left join Department as Dep on Empl.DepartmentId = Dep.ID '
-                            'Order by Sals.Salary desc, Dep.Name')
+                            'Order by Dep.Name, Empl.Salary desc ')
 print(*result.fetchall(), sep='\n')
 # part star
 print('Results for part two')
 three_months_ago = datetime.datetime.now() - datetime.timedelta(days=90)
 three_months_ago = three_months_ago.strftime('%Y-%m-%d')
-result = connection.execute(f"select Dep.Name, Empl.Name, Sals.Salary from Employee Empl "
-                            f"inner join (select distinct Salary from Employee order by Salary desc limit 3) Sals "
-                            f"on Empl.Salary=Sals.Salary "
-                            f"left join Department as Dep on Empl.DepartmentId = Dep.ID "
+result = connection.execute('select Dep.Name, Empl.Name, Empl.Salary, Empl.PaymentDate from Employee Empl '
+                            'inner join (select ID from '
+                            '(select DepartmentId, Salary, ID, row_number() '
+                            'over(partition by DepartmentId order by DepartmentId desc, Salary desc) as Num '
+                            'from Employee order by num desc, departmentid) where '
+                            'num <= 3 order by DepartmentId) Sals '
+                            'on Empl.ID=Sals.ID '
+                            'left join Department as Dep on Empl.DepartmentId = Dep.ID '
                             f"where Empl.Salary > 5000 AND PaymentDate >= '{three_months_ago}' "
-                            f"Order by Sals.Salary desc, Dep.Name")
+                            'Order by Dep.Name, Empl.Salary desc ')
 print(*result.fetchall(), sep='\n')
